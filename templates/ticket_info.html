@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket {{ ticket_id }} Info</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .chat-box {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .chat-message {
+            margin-bottom: 10px;
+        }
+
+        .chat-message .user {
+            font-weight: bold;
+        }
+        .chat-message .service {
+            color: #929292;
+        }
+        .username-display {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-4">
+    <!-- Username Display -->
+    <div class="username-display">
+        Logged in as: <span id="username">{{ username }}</span>
+    </div>
+
+    <!-- Ticket Info -->
+    <h3>Ticket: {{ ticket["name"] }}  </br> {{ ticket_id }} </h3>
+    <p><strong>Product:</strong> {{ ticket["product_name"] }}</p>
+    <p><strong>Author:</strong> {{ ticket["author"] }}</p>
+    <p>
+            <strong>Assignees:</strong>
+            <select id="assigneesSelect" class="form-select" multiple>
+                {% for assignee in assignees %}
+                    <option value="{{ assignee }}" {% if assignee in ticket["assignees"] %}selected{% endif %}>
+                        {{ assignee }}
+                    </option>
+                {% endfor %}
+            </select>
+            <button id="updateAssigneesButton" class="btn btn-primary btn-sm mt-2">Update Assignees</button>
+        </p>
+    <p>
+    <strong>Status:</strong>
+    <select id="statusSelect" class="form-select">
+        <option value="Open" {% if ticket["status"] == "Open" %}selected{% endif %}>Open</option>
+        <option value="In Progress" {% if ticket["status"] == "In Progress" %}selected{% endif %}>In Progress</option>
+        <option value="Closed" {% if ticket["status"] == "Closed" %}selected{% endif %}>Closed</option>
+    </select>
+    <button id="updateStatusButton" class="btn btn-primary btn-sm mt-2">Update Status</button>
+    </p>
+
+    <!-- Chat Section -->
+    <h4>Chat</h4>
+    <div class="chat-box" id="chatBox"></div>
+
+    <div class="mt-3">
+        <div class="input-group">
+            <input type="text" id="messageInput" class="form-control" placeholder="Type your message">
+            <button class="btn btn-primary" id="sendButton">Send</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    const ticketId = "{{ ticket_id }}";
+    const chatBox = document.getElementById("chatBox");
+    const messageInput = document.getElementById("messageInput");
+    const sendButton = document.getElementById("sendButton");
+    const assigneesSelect = document.getElementById("assigneesSelect");
+    const updateAssigneesButton = document.getElementById("updateAssigneesButton");
+    const statusSelect = document.getElementById("statusSelect");
+    const updateStatusButton = document.getElementById("updateStatusButton");
+
+    function fetchAssignees() {
+        $.getJSON("/assignees", function (data) {
+            assigneesSelect.innerHTML = ""; // Clear existing options
+            const currentAssignees = {{ ticket['assignees'] | tojson }}; // Get current assignees from the server
+
+            data.forEach((assignee) => {
+                const option = document.createElement("option");
+                option.value = assignee.login;
+                option.textContent = assignee.login;
+
+                // Check if this assignee is already assigned to the ticket
+                if (currentAssignees.includes(assignee.login)) {
+                    option.selected = true;
+                }
+
+                assigneesSelect.appendChild(option);
+            });
+        });
+    }
+    // Update the ticket's assignees
+        updateAssigneesButton.addEventListener("click", () => {
+            const selectedAssignees = Array.from(assigneesSelect.options)
+                .filter(option => option.selected)
+                .map(option => option.value);
+
+            $.ajax({
+                url: `/api/${ticketId}/assignees`,
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ assignees: selectedAssignees }),
+                success: (response) => {
+                    alert("Assignees updated successfully!");
+                },
+                error: (error) => {
+                    alert("Error updating assignees: " + error.responseJSON.error);
+                },
+            });
+        });
+
+        // Fetch assignees on page load
+        fetchAssignees();
+
+    // Fetch and display messages
+    function fetchMessages() {
+        $.getJSON(`/chat/${ticketId}`, function (messages) {
+            chatBox.innerHTML = ""; // Clear previous messages
+            messages.forEach((msg) => {
+                appendMessage(msg);
+            });
+        });
+    }
+    updateStatusButton.addEventListener("click", () => {
+    const selectedStatus = statusSelect.value;
+    $.ajax({
+            url: `/api/${ticketId}/status`,
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({ status: selectedStatus }),
+            success: (response) => {
+                alert("Status updated successfully!");
+            },
+            error: (error) => {
+                alert("Error updating status: " + error.responseJSON.error);
+            },
+        });
+    });
+
+    // Append a message to the chat box
+    function appendMessage(data) {
+        const div = document.createElement("div");
+        div.classList.add("chat-message");
+        const date = new Date(data.date).toLocaleDateString('ru',
+            {weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric'});
+        if (data.message.toString().startsWith('*'))
+            div.innerHTML = `<i>
+                <!-- <span class="user">${data.authorlogin}:</span> -->
+                <span class="service">${data.message.substring(1)}</span>
+                <div class="service">${date}</div></i>`;
+        else if (data.message.toString().startsWith('!'))
+            div.innerHTML = `<i>----------------------</div></i>`;
+        else
+            div.innerHTML = `
+                <span class="user">${data.authorlogin}:</span>
+                <span class="message">${data.message}</span>
+                <div class="time">${date}</div>`;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Send a new message
+    sendButton.addEventListener("click", () => {
+        const message = messageInput.value.trim();
+        if (message) {
+            $.ajax({
+                url: `/chat/${ticketId}`,
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({user: document.getElementById('username').innerText, message: message, date: new Date().toLocaleDateString('ru',
+            {weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric'})}),
+                success: () => {
+                    appendMessage({authorlogin: document.getElementById('username').innerText, message: message,date: new Date().toISOString()});
+                    messageInput.value = "";
+                },
+            });
+        }
+    });
+
+    // Load initial messages
+    fetchMessages();
+</script>
+</body>
+</html>

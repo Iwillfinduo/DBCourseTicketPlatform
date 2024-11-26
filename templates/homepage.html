@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Tickets</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .header {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+        }
+        .header .logout-btn {
+            background-color: white;
+            color: #007bff;
+            border: 1px solid white;
+        }
+        .header .logout-btn:hover {
+            background-color: #0056b3;
+            color: white;
+        }
+        .ticket-row:hover {
+            background-color: #f8f9fa;
+        }
+        .status-open {
+            color: green;
+            font-weight: bold;
+        }
+        .status-in-progress {
+            color: orange;
+            font-weight: bold;
+        }
+        .status-closed {
+            color: red;
+            font-weight: bold;
+        }
+        .plus-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
+        }
+        .plus-button:hover {
+            background-color: #0056b3;
+        }
+        tbody tr {
+            cursor: pointer;
+        }
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <nav class="header d-flex justify-content-between align-items-center">
+        <h4>All Tickets</h4>
+        <button class="btn logout-btn">Logout</button>
+    </nav>
+
+    <!-- Tickets Table -->
+    <div class="container mt-4">
+        <h5>All Tickets</h5>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Ticket ID</th>
+                        <th>Name</th>
+                        <th>Product Name</th>
+                        <th>Creation Date</th>
+                        <th>Author</th>
+                        <th>Assignees</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="ticket-table-body">
+                    <!-- Data will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+     <!-- Plus Button -->
+    <a href="/create-ticket" class="plus-button">+</a>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Fetch tickets data from the server and populate the table
+        $(document).ready(function() {
+            $.getJSON("/api/tickets", function(tickets) {
+                let tableBody = $("#ticket-table-body");
+                tickets.forEach(ticket => {
+                    let statusClass =
+                        ticket.status === "Open" ? "status-open" :
+                        ticket.status === "In Progress" ? "status-in-progress" :
+                        "status-closed";
+
+                    let row = `
+                        <tr class="ticket-row">
+                            <td class = "id">${ticket.ticket_id}</td>
+                            <td>${ticket.name}</td>
+                            <td>${ticket.product_name}</td>
+                            <td>${ticket.creation_date}</td>
+                            <td>${ticket.author}</td>
+                            <td>${ticket.assignees}</td>
+                            <td class="${statusClass}">${ticket.status}</td>
+                        </tr>
+                    `;
+                    tableBody.append(row);
+                });
+                tableBody.on("click", "tr", function() {
+                    const ticketId = $(this).closest("tr")   // Finds the closest row <tr>
+                       .find(".id")     // Gets a descendent with class="nr"
+                       .text();         // Retrieves the text within <td>;
+                    // Use window.location.assign() for navigation
+                    window.location.assign(`/ticket/${ticketId}`);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
