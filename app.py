@@ -164,9 +164,15 @@ def update_ticket_status(ticket_id):
 
 
 
-@app.route('/assignees', methods=['GET'])
+@app.route('/api/all_assignees', methods=['GET'])
 def get_assignees():
     assignees = DAO.GetAllUsersByRole(conn, 2)
+    print(assignees)
+    return jsonify(assignees)
+
+@app.route('/api/{ticket_id}/assignees}', methods=['GET'])
+def get_assignees_under_ticket(ticket_id):
+    assignees = DAO.GetAllTicketAssignmentsByRole(conn, ticket_id, 2)
     print(assignees)
     return jsonify(assignees)
 
@@ -175,4 +181,4 @@ def get_assignees():
 
 if __name__ == '__main__':
 
-    app.run()
+    app.run(port=5002)
