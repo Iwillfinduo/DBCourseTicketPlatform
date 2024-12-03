@@ -1,15 +1,16 @@
 import uuid
 
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from psycopg2 import sql
 import bcrypt
-from psycopg2 import connect
-from psycopg2.extras import RealDictCursor, register_uuid
 
 
-class DAO:
+class DAOStatic:
 
     @staticmethod
     def GetDBConnection(dbname: str, user: str, passwd: str, host: str, port: str):
-        return connect(
+        return psycopg2.connect(
             dbname=dbname,
             user=user,
             password=passwd,
@@ -20,34 +21,70 @@ class DAO:
         )
 
     @staticmethod
-    def GetUserFromDB(connection, got_login: str):
-        cursor = connection.cursor()
-        cursor.execute(f'SELECT * FROM users WHERE login = \'{got_login}\'')
+    def GetUserFromDB(connection, got_login: str, cursor=None):
+        is_cursor = True
+        if cursor is None:
+            is_cursor = False
+            cursor = connection.cursor()
+
+        query = sql.SQL("SELECT * FROM users WHERE login = {login}").format(
+            login=sql.Literal(got_login)
+        )
+        cursor.execute(query)
         user = cursor.fetchone()
-        cursor.close()
+        if not is_cursor:
+            cursor.close()
         return user
 
     @staticmethod
-    def AddUserToDB(connection, login: str, password: str, name: str, full_name: str, role: int):
-        cursor = connection.cursor()
-        cursor.execute(f'SELECT * FROM users WHERE login = \'{login}\'')
+    def AddUserToDB(connection, login: str, password: str, name: str, full_name: str, role: int, cursor=None):
+        is_cursor = True
+        if cursor is None:
+            is_cursor = False
+            cursor = connection.cursor()
+
+        query = sql.SQL("SELECT * FROM users WHERE login = {login}").format(
+            login=sql.Literal(login)
+        )
+        cursor.execute(query)
         user = cursor.fetchone()
+
         if user is None:
-            password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-            print(len(password))
-            print(password)
+            password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             try:
-                cursor.execute(f"insert into Users(Login, name, fullname, passwordhash, role) "
-                               f"values ('{login}', '{name}', '{full_name}', '{str(password)}', {role});")
+                insert_query = sql.SQL("""
+                    INSERT INTO Users(Login, name, fullname, passwordhash, role)
+                    VALUES ({login}, {name}, {fullname}, {passwordhash}, {role})
+                """).format(
+                    login=sql.Literal(login),
+                    name=sql.Literal(name),
+                    fullname=sql.Literal(full_name),
+                    passwordhash=sql.Literal(password_hash),
+                    role=sql.Literal(str(role))  # Role should be converted to string for SQL
+                )
+                cursor.execute(insert_query)
                 connection.commit()
             except Exception as e:
                 connection.rollback()
                 print(e)
 
+        cursor.close()
+
     @staticmethod
     def GetAllTickets(connection):
         cursor = connection.cursor()
-        cursor.execute(f'SELECT * FROM tickets')
+        cursor.execute("SELECT * FROM tickets")
+        tickets = cursor.fetchall()
+        cursor.close()
+        return tickets
+
+    @staticmethod
+    def GetTicketByAuthor(connection, author_login):
+        cursor = connection.cursor()
+        query = sql.SQL("SELECT * FROM tickets WHERE authorlogin = {author_login}").format(
+            author_login=sql.Literal(author_login)
+        )
+        cursor.execute(query)
         tickets = cursor.fetchall()
         cursor.close()
         return tickets
@@ -56,7 +93,11 @@ class DAO:
     def CreateTicket(connection, ProductID, AuthorLogin):
         cursor = connection.cursor()
         try:
-            cursor.execute(f"select create_ticket('{ProductID}','{AuthorLogin}');")
+            query = sql.SQL("SELECT create_ticket({ProductID}, {AuthorLogin})").format(
+                ProductID=sql.Literal(ProductID),
+                AuthorLogin=sql.Literal(AuthorLogin)
+            )
+            cursor.execute(query)
             result = cursor.fetchone()
             connection.commit()
         except Exception as e:
@@ -70,26 +111,37 @@ class DAO:
     def CreateProduct(connection, ProductName):
         cursor = connection.cursor()
         try:
-            cursor.execute(
-                f"insert into Products(ProductID, Name) values (gen_random_uuid(), '{ProductName}');")
+            insert_query = sql.SQL("""
+                INSERT INTO Products(ProductID, Name) 
+                VALUES (gen_random_uuid(), {ProductName})
+            """).format(
+                ProductName=sql.Literal(ProductName)
+            )
+            cursor.execute(insert_query)
             connection.commit()
         except Exception as e:
             connection.rollback()
+            print(e)
         cursor.close()
 
     @staticmethod
     def GetAllProducts(connection):
         cursor = connection.cursor()
-        cursor.execute(f'SELECT * FROM products')
+        cursor.execute("SELECT * FROM products")
         products = cursor.fetchall()
         cursor.close()
         return products
 
     @staticmethod
-    def SendMessageUnderTicket(connection,author_login,ticket_id, message):
+    def SendMessageUnderTicket(connection, author_login, ticket_id, message):
         cursor = connection.cursor()
         try:
-            cursor.execute(f"select send_message('{author_login}','{ticket_id}','{message}');")
+            query = sql.SQL("SELECT send_message({author_login}, {ticket_id}, {message})").format(
+                author_login=sql.Literal(author_login),
+                ticket_id=sql.Literal(ticket_id),
+                message=sql.Literal(message)
+            )
+            cursor.execute(query)
             connection.commit()
             out = cursor.fetchone()
         except Exception as e:
@@ -100,9 +152,12 @@ class DAO:
         return out
 
     @staticmethod
-    def GetMessagesUnderTicket(connection,ticket_id):
+    def GetMessagesUnderTicket(connection, ticket_id):
         cursor = connection.cursor()
-        cursor.execute(f"select * from messages where ticketid = '{ticket_id}' order by date ;")
+        query = sql.SQL("SELECT * FROM messages WHERE ticketid = {ticket_id} ORDER BY date").format(
+            ticket_id=sql.Literal(ticket_id)
+        )
+        cursor.execute(query)
         messages = cursor.fetchall()
         cursor.close()
         return messages
@@ -110,7 +165,10 @@ class DAO:
     @staticmethod
     def GetProductName(connection, ProductID):
         cursor = connection.cursor()
-        cursor.execute(f"select name from Products where ProductID = '{ProductID}';")
+        query = sql.SQL("SELECT name FROM Products WHERE ProductID = {ProductID}").format(
+            ProductID=sql.Literal(ProductID)
+        )
+        cursor.execute(query)
         name = cursor.fetchone()['name']
         cursor.close()
         return name
@@ -118,7 +176,10 @@ class DAO:
     @staticmethod
     def GetTicketById(connection, ticket_id):
         cursor = connection.cursor()
-        cursor.execute(f"select * from tickets where ticketid = '{ticket_id}';")
+        query = sql.SQL("SELECT * FROM tickets WHERE ticketid = {ticket_id}").format(
+            ticket_id=sql.Literal(ticket_id)
+        )
+        cursor.execute(query)
         ticket = cursor.fetchone()
         cursor.close()
         return ticket
@@ -126,7 +187,10 @@ class DAO:
     @staticmethod
     def GetAllUsersByRole(connection, role):
         cursor = connection.cursor()
-        cursor.execute(f"select * from users where role = '{role}';")
+        query = sql.SQL("SELECT * FROM users WHERE role = {role}").format(
+            role=sql.Literal(role)
+        )
+        cursor.execute(query)
         users = cursor.fetchall()
         cursor.close()
         return users
@@ -134,32 +198,49 @@ class DAO:
     @staticmethod
     def GetAllTicketAssignmentsByRole(connection, ticket_id, role):
         cursor = connection.cursor()
-        cursor.execute(f"select * from participants join users on participants.userlogin = users.login where"
-                       f" ticketid = '{ticket_id}' and role = {role};")
+        query = sql.SQL("""
+            SELECT * FROM participants
+            JOIN users ON participants.userlogin = users.login
+            WHERE ticketid = {ticket_id} AND role = {role}
+        """).format(
+            ticket_id=sql.Literal(ticket_id),
+            role=sql.Literal(role)
+        )
+        cursor.execute(query)
         output = cursor.fetchall()
         cursor.close()
         return output
 
     @staticmethod
-    def AddAssignmentToTicketAssignments(connection, ticket_id, assignments_logins:list):
+    def AddAssignmentToTicketAssignments(connection, ticket_id, assignments_logins):
         cursor = connection.cursor()
         try:
             for assignment_login in assignments_logins:
-                cursor.execute(f"insert into Participants(userlogin, ticketid)"
-                               f"values ('{assignment_login}', '{ticket_id}'); ")
-
+                query = sql.SQL("""
+                    INSERT INTO Participants(userlogin, ticketid)
+                    VALUES ({assignment_login}, {ticket_id})
+                """).format(
+                    assignment_login=sql.Literal(assignment_login),
+                    ticket_id=sql.Literal(ticket_id)
+                )
+                cursor.execute(query)
             connection.commit()
         except Exception as e:
             connection.rollback()
             print(e)
-
         cursor.close()
 
     @staticmethod
     def ChangeTicketStatus(connection, ticket_id, new_status):
         cursor = connection.cursor()
         try:
-            cursor.execute(f"update tickets set status = {new_status} where ticketid = '{ticket_id}';")
+            query = sql.SQL("""
+                UPDATE tickets SET status = {new_status} WHERE ticketid = {ticket_id}
+            """).format(
+                new_status=sql.Literal(new_status),
+                ticket_id=sql.Literal(ticket_id)
+            )
+            cursor.execute(query)
             connection.commit()
         except Exception as e:
             connection.rollback()
@@ -170,26 +251,32 @@ class DAO:
     def DeleteTicketAssignments(connection, ticket_id):
         cursor = connection.cursor()
         try:
-            cursor.execute(f"delete from participants where ticketid = '{ticket_id}'"
-                           f" and userlogin in (select userlogin from users where role = 2);")
+            query = sql.SQL("""
+                DELETE FROM participants WHERE ticketid = {ticket_id}
+                AND userlogin IN (SELECT userlogin FROM users WHERE role = 2)
+            """).format(
+                ticket_id=sql.Literal(ticket_id)
+            )
+            cursor.execute(query)
             connection.commit()
         except Exception as e:
             connection.rollback()
             print(e)
         cursor.close()
 
+
 if __name__ == '__main__':
-    conn = DAO.GetDBConnection(dbname='postgres', user='postgres', passwd='postgres', host='localhost', port='5432')
-    # DAO.AddUserToDB(conn, 'admin', 'admin', 'HOUSE', 'HOUSE_GREGORY_AZATOVYCH', role=1)
-    # DAO.CreateProduct(conn, 'Steam')
-    # DAO.CreateTicket(conn, DAO.GetAllProducts(conn)[0]['productid'], 'admin')
-    #DAO.SendMessageUnderTicket(conn, 'admin', 'b2206e6a-5796-4501-9644-c0220efad069', 'I love you')
-    #print(DAO.GetMessagesUnderTicket(conn, 'b2206e6a-5796-4501-9644-c0220efad069'))
-    # print(DAO.GetUserFromDB(conn, 'admin'))
-    # print(DAO.GetAllTickets(conn))
-    # print(DAO.GetAllProducts(conn))
-    # print(DAO.GetProductName(conn, '33f03031-6767-4aa4-adb4-df4a6f3177b8'))
-    #DAO.AddUserToDB(conn, 'dev2', 'dev2', 'VALDOS', 'Глущенко Владислав', role=2)
-    print(DAO.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
-    DAO.DeleteTicketAssignments(conn, ticket_id='b2206e6a-5796-4501-9644-c0220efad069')
-    print(DAO.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
+    conn = DAOStatic.GetDBConnection(dbname='postgres', user='postgres', passwd='postgres', host='localhost', port='5432')
+    #DAOStatic.AddUserToDB(conn, 'customer', 'customer', 'Lox', 'Lox', role=3)
+    # # DAO.CreateProduct(conn, 'Steam')
+    # # DAO.CreateTicket(conn, DAO.GetAllProducts(conn)[0]['productid'], 'admin')
+    # #DAO.SendMessageUnderTicket(conn, 'admin', 'b2206e6a-5796-4501-9644-c0220efad069', 'I love you')
+    # #print(DAO.GetMessagesUnderTicket(conn, 'b2206e6a-5796-4501-9644-c0220efad069'))
+    print(DAOStatic.GetUserFromDB(conn, 'customer'))
+    # # print(DAO.GetAllTickets(conn))
+    # # print(DAO.GetAllProducts(conn))
+    # # print(DAO.GetProductName(conn, '33f03031-6767-4aa4-adb4-df4a6f3177b8'))
+    # #DAO.AddUserToDB(conn, 'dev2', 'dev2', 'VALDOS', 'Глущенко Владислав', role=2)
+    # print(DAO.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
+    # DAO.DeleteTicketAssignments(conn, ticket_id='b2206e6a-5796-4501-9644-c0220efad069')
+    # print(DAO.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))

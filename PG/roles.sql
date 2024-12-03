@@ -14,4 +14,7 @@ Grant EXECUTE on function get_info_about_your_tickets to customer;
 Grant EXECUTE on function create_ticket to customer;
 Grant EXECUTE  on function send_message to customer;
 
-REVOKE TRUNCATE, TRIGGER, TRIGGER on All tables in schema project from dev,manager
+REVOKE TRUNCATE, DROP on All tables in schema project from dev;
+REVOKE TRUNCATE, DROP on All tables in schema project from manager;
+
+

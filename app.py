@@ -3,7 +3,7 @@ from flask import Flask, request, flash, redirect, url_for, jsonify
 from flask import render_template, session
 import os
 
-from DAO.main import DAO
+from DAO.main import DAOStatic as DAO
 from DAO.utils import FormsGenerator
 
 DB_NAME = os.environ['DB_NAME']
@@ -48,7 +48,10 @@ def login():
 @app.route('/homepage')
 def homepage():
     if 'username' in session:
-        return render_template('homepage.html')
+        if session['role'] == 1 or session['role'] == 2:
+            return render_template('admin/homepage.html')
+        else:
+            return render_template('customer/homepage.html')
     else:
         return redirect(url_for('root'))
 
@@ -56,8 +59,14 @@ def homepage():
 def tickets_table():
     if 'username' in session:
         output = []
-        if session['role'] == 1:
+        if session['role'] == 1 or session['role'] == 2:
             tickets = DAO.GetAllTickets(conn)
+
+            for ticket in tickets:
+                element = FormsGenerator.GenerateTicketInfo(conn, ticket)
+                output.append(element)
+        elif session['role'] == 3:
+            tickets = DAO.GetTicketByAuthor(conn, session['username'])
 
             for ticket in tickets:
                 element = FormsGenerator.GenerateTicketInfo(conn, ticket)
@@ -97,14 +106,23 @@ def products_table():
 
 @app.route('/ticket/<ticket_id>')
 def ticket_info(ticket_id):
-    if 'username' in session:
+    if 'username' in session and session['role'] == 1:
         ticket_id = str(ticket_id)
         print(ticket_id)
         ticket = DAO.GetTicketById(conn, ticket_id)
         print(ticket)
         if ticket:
             element = FormsGenerator.GenerateTicketInfo(conn, ticket)
-            return render_template("ticket_info.html", ticket=element, ticket_id=ticket_id, username=session['username'])
+            return render_template("admin/ticket_info.html", ticket=element, ticket_id=ticket_id,
+                                   username=session['username'])
+    elif 'username' in session and session['role'] == 3:
+        ticket_id = str(ticket_id)
+        print(ticket_id)
+        ticket = DAO.GetTicketById(conn, ticket_id)
+        if ticket['authorlogin'] == session['username']:
+            element = FormsGenerator.GenerateTicketInfo(conn, ticket)
+            return render_template("customer/ticket_info.html", ticket=element, ticket_id=ticket_id,
+                                   username=session['username'])
 
 @app.route("/chat/<ticket_id>/", methods=['POST','GET'])
 def chat_api(ticket_id):

@@ -1,4 +1,4 @@
-from DAO.main import DAO
+from DAO.main import DAOStatic as DAO
 
 
 class FormsGenerator():
