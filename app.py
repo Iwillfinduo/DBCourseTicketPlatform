@@ -44,7 +44,10 @@ def login():
         flash(f"Database error: {e}")
 
     return redirect(url_for("root"))
-
+@app.route('/logout/')
+def logout():
+    session.clear()
+    return redirect(url_for('root'))
 @app.route('/homepage')
 def homepage():
     if 'username' in session:

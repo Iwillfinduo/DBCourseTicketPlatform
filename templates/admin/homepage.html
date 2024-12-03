@@ -67,7 +67,7 @@
     <!-- Header -->
     <nav class="header d-flex justify-content-between align-items-center">
         <h4>All Tickets</h4>
-        <button class="btn logout-btn">Logout</button>
+        <button id="logout" class="btn logout-btn">Logout</button>
     </nav>
 
     <!-- Tickets Table -->
@@ -98,6 +98,12 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let logout_button = document.getElementById("logout");
+
+        logout_button.onclick = function () {
+            window.location.assign('/logout')
+        };
+
         // Fetch tickets data from the server and populate the table
         $(document).ready(function() {
             $.getJSON("/api/tickets", function(tickets) {
