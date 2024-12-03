@@ -166,16 +166,30 @@ class DAO:
             print(e)
         cursor.close()
 
+    @staticmethod
+    def DeleteTicketAssignments(connection, ticket_id):
+        cursor = connection.cursor()
+        try:
+            cursor.execute(f"delete from participants where ticketid = '{ticket_id}'"
+                           f" and userlogin in (select userlogin from users where role = 2);")
+            connection.commit()
+        except Exception as e:
+            connection.rollback()
+            print(e)
+        cursor.close()
+
 if __name__ == '__main__':
     conn = DAO.GetDBConnection(dbname='postgres', user='postgres', passwd='postgres', host='localhost', port='5432')
     # DAO.AddUserToDB(conn, 'admin', 'admin', 'HOUSE', 'HOUSE_GREGORY_AZATOVYCH', role=1)
-    DAO.CreateProduct(conn, 'Steam')
+    # DAO.CreateProduct(conn, 'Steam')
     # DAO.CreateTicket(conn, DAO.GetAllProducts(conn)[0]['productid'], 'admin')
     #DAO.SendMessageUnderTicket(conn, 'admin', 'b2206e6a-5796-4501-9644-c0220efad069', 'I love you')
     #print(DAO.GetMessagesUnderTicket(conn, 'b2206e6a-5796-4501-9644-c0220efad069'))
-    print(DAO.GetUserFromDB(conn, 'admin'))
-    print(DAO.GetAllTickets(conn))
-    print(DAO.GetAllProducts(conn))
-    print(DAO.GetProductName(conn, '33f03031-6767-4aa4-adb4-df4a6f3177b8'))
+    # print(DAO.GetUserFromDB(conn, 'admin'))
+    # print(DAO.GetAllTickets(conn))
+    # print(DAO.GetAllProducts(conn))
+    # print(DAO.GetProductName(conn, '33f03031-6767-4aa4-adb4-df4a6f3177b8'))
     #DAO.AddUserToDB(conn, 'dev2', 'dev2', 'VALDOS', 'Глущенко Владислав', role=2)
+    print(DAO.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
+    DAO.DeleteTicketAssignments(conn, ticket_id='b2206e6a-5796-4501-9644-c0220efad069')
     print(DAO.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))

@@ -47,6 +47,7 @@
      <!-- Updated Assignees Section -->
     <p>
         <br><strong>Assignees:</strong></br>
+        <br><ul id="currentAssigneesList" class="list-group mb-3"></ul></br>
         <select id="assigneesSelect" class="form-select" multiple >
         </select>
         <button id="updateAssigneesButton" class="btn btn-primary btn-sm mt-2">Update Assignees</button>
@@ -86,8 +87,10 @@
     const statusSelect = document.getElementById("statusSelect");
     const updateStatusButton = document.getElementById("updateStatusButton");
 
+
+
     function fetchAvailableAssignees() {
-        $.getJSON("/assignees", function (data) {
+        $.getJSON("/api/all_assignees", function (data) {
             $('#assigneesSelect').empty(); // Clear existing options
 
             data.forEach((assignee) => {
@@ -99,7 +102,16 @@
             $('#assigneesSelect').multiselect('rebuild');
         });
     }
+    function fetchTicketAssignees(){
+        $.getJSON(`/api/${ticketId}/assignees`, function (data){
+            data = data.assignees
 
+            data.forEach((assignee) => {
+                var line = `<li class="list-group-item"> ${assignee.fullname.toString()} login:<br>${assignee.login.toString()}</br> </li>`;
+                $('#currentAssigneesList').append(line);
+            });
+        });
+    }
     // Fetch Assignees on Page Load
     $(document).ready(function () {
         $('#assigneesSelect').multiselect({
@@ -117,13 +129,12 @@
         // Fetch and populate the assignees on page load
         fetchAvailableAssignees();
     });
-    
+    fetchTicketAssignees();
 
 
-    // Update Assignees Logic
-    updateAssigneesButton.click(function() {
-        const selectedAssignees = assigneesSelect.val();
-
+     // Update Assignees Logic
+    updateAssigneesButton.addEventListener("click", () => {
+        const selectedAssignees = $('#assigneesSelect').val();
         $.ajax({
             url: `/api/${ticketId}/assignees`,
             method: 'POST',
@@ -131,6 +142,7 @@
             data: JSON.stringify({ assignees: selectedAssignees }),
             success: function(response) {
                 alert('Assignees updated successfully!');
+                location.reload();
             },
             error: function(error) {
                 alert('Error updating assignees: ' + error.responseJSON.error);

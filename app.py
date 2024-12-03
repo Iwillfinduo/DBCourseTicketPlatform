@@ -125,11 +125,13 @@ def chat_api(ticket_id):
 
 @app.route('/api/<ticket_id>/assignees', methods=['POST'])
 def update_ticket_assignees(ticket_id):
+    print('try_to_update')
     if 'username' in session and session['role'] == 1:
         ticket = DAO.GetTicketById(conn, ticket_id)
         who_made_assignment = session['username']
         if not ticket:
             return jsonify({"error": "Ticket not found"}), 404
+        DAO.DeleteTicketAssignments(conn, ticket_id)
         assignees = DAO.GetAllUsersByRole(conn, 2)
         assignees_logins = [assignee.get('login') for assignee in assignees]
         print(assignees)
@@ -137,8 +139,8 @@ def update_ticket_assignees(ticket_id):
         new_assignees = data.get("assignees", [])
         print(new_assignees)
         print(assignees_logins)
-        if (not all(assignee in assignees_logins for assignee in new_assignees)) or new_assignees == []:
-            return jsonify({"error": "One or more assignees are invalid"}), 400
+        if new_assignees == []:
+            return jsonify({"error": "Got zero logins"}), 400
         DAO.AddAssignmentToTicketAssignments(conn, ticket_id, new_assignees)
         return jsonify({"success": True, "assignees": new_assignees})
     else:
@@ -170,11 +172,12 @@ def get_assignees():
     print(assignees)
     return jsonify(assignees)
 
-@app.route('/api/{ticket_id}/assignees}', methods=['GET'])
+@app.route('/api/<ticket_id>/assignees', methods=['GET'])
 def get_assignees_under_ticket(ticket_id):
     assignees = DAO.GetAllTicketAssignmentsByRole(conn, ticket_id, 2)
     print(assignees)
-    return jsonify(assignees)
+    print(jsonify({'assignees': assignees}).json)
+    return jsonify({'assignees': assignees})
 
 
 
