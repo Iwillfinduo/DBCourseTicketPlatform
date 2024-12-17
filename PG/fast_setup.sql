@@ -152,6 +152,11 @@ GRANT All privileges on users to dev;
 Grant EXECUTE on function get_info_about_your_tickets to customer;
 Grant EXECUTE on function create_ticket to customer;
 Grant EXECUTE  on function send_message to customer;
+grant SELECT on products to customer;
+grant select on messages to customer;
+grant select on users to customer;
+grant select on participants to customer;
+grant select on tickets to customer;
 
 REVOKE TRUNCATE on All tables in schema project from dev;
 REVOKE TRUNCATE on All tables in schema project from manager;
