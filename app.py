@@ -109,7 +109,7 @@ def products_table():
 
 @app.route('/ticket/<ticket_id>')
 def ticket_info(ticket_id):
-    if 'username' in session and session['role'] == 1:
+    if 'username' in session and (session['role'] == 1):
         ticket_id = str(ticket_id)
         print(ticket_id)
         ticket = DAO.GetTicketById(conn, ticket_id)
@@ -126,6 +126,8 @@ def ticket_info(ticket_id):
             element = FormsGenerator.GenerateTicketInfo(conn, ticket)
             return render_template("customer/ticket_info.html", ticket=element, ticket_id=ticket_id,
                                    username=session['username'])
+    elif 'username' in session and session['role'] == 2:
+        ticket_id = str(ticket_id)
 
 @app.route("/chat/<ticket_id>/", methods=['POST','GET'])
 def chat_api(ticket_id):

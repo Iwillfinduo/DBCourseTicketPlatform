@@ -266,13 +266,13 @@ class DAOStatic:
 
 
 if __name__ == '__main__':
-    conn = DAOStatic.GetDBConnection(dbname='postgres', user='postgres', passwd='postgres', host='localhost', port='5432')
+    conn = DAOStatic.GetDBConnection(dbname='pg_db', user='postgres', passwd='postgres', host='localhost', port='5432')
     #DAOStatic.AddUserToDB(conn, 'customer', 'customer', 'Lox', 'Lox', role=3)
     # # DAO.CreateProduct(conn, 'Steam')
     # # DAO.CreateTicket(conn, DAO.GetAllProducts(conn)[0]['productid'], 'admin')
     # #DAO.SendMessageUnderTicket(conn, 'admin', 'b2206e6a-5796-4501-9644-c0220efad069', 'I love you')
     # #print(DAO.GetMessagesUnderTicket(conn, 'b2206e6a-5796-4501-9644-c0220efad069'))
-    print(DAOStatic.GetUserFromDB(conn, 'customer'))
+    # print(DAOStatic.GetUserFromDB(conn, 'customer'))
     # # print(DAO.GetAllTickets(conn))
     # # print(DAO.GetAllProducts(conn))
     # # print(DAO.GetProductName(conn, '33f03031-6767-4aa4-adb4-df4a6f3177b8'))
@@ -280,3 +280,4 @@ if __name__ == '__main__':
     # print(DAO.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
     # DAO.DeleteTicketAssignments(conn, ticket_id='b2206e6a-5796-4501-9644-c0220efad069')
     # print(DAO.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
+    #DAOStatic.AddUserToDB(conn, 'customer', 'customer', 'Anton', 'Антоша Бордвайн', role=3)
