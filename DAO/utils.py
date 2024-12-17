@@ -5,6 +5,7 @@ class FormsGenerator():
 
     @staticmethod
     def GenerateTicketInfo(conn,ticket):
+        print(ticket)
         messages = DAO.GetMessagesUnderTicket(conn, ticket['ticketid'])
         date = messages[0]['date']
         user = DAO.GetUserFromDB(conn, ticket['authorlogin'])

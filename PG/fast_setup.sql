@@ -1,6 +1,6 @@
 CREATE SCHEMA IF NOT EXISTS project;
 SET search_path TO project;
-
+CREATE EXTENSION pgcrypto;
 drop table if exists Users cascade;
 create table Users
 (
@@ -63,7 +63,8 @@ create or replace function
             return send_date;
         end if;
     end;
-    $$ language plpgsql;
+    $$ language plpgsql
+       SECURITY DEFINER SET search_path = project;
 
 
 
@@ -82,13 +83,15 @@ create or replace function
             return id;
         end if;
     end;
-    $$ language plpgsql;
+    $$ language plpgsql
+       SECURITY DEFINER SET search_path = project;
 
 create or replace function get_info_about_your_tickets(a_log varchar(30))
 	returns table
         (
             TicketID uuid,
 			ProductID uuid,
+            AuthorLogin varchar(30),
 			Status smallint
         )
 	as
@@ -98,39 +101,35 @@ create or replace function get_info_about_your_tickets(a_log varchar(30))
             return query
 					select tickets.TicketID,
 						   tickets.ProductID,
+						   tickets.authorlogin,
 						   tickets.Status
 					from tickets
 					where tickets.authorLogin = a_log;
+        else
+            return;
         end if;
     end;
-    $$ language plpgsql;
-
-SET search_path TO project;
-
-create or replace function CreateAuthorRow() returns trigger as
-	$$
-	begin
-		insert into participants(UserLogin, TicketID)
-		values (new.AuthorLogin, new.TicketID);
-		insert into messages(authorlogin, ticketid, message)
-		values (new.authorlogin, new.ticketid, concat('* ',new.authorlogin, ' Created a ticket'));
-		return new;
-	end;
-	$$ LANGUAGE plpgsql;
-
-drop trigger if exists TicketCheck on Tickets;
-create trigger TicketCheck
-    after insert on Tickets
-	for each row
-	execute function
-	CreateAuthorRow();
-
-
+    $$ language plpgsql
+       SECURITY DEFINER SET search_path = project;
 SET search_path TO  project;
 
 create role customer login;
+grant all on schema project to customer;
+grant all on all tables in schema project to customer;
+grant all on all sequences in schema project to customer;
+grant all on all functions in schema project to customer;
+
 create role dev login;
+grant all on schema project to dev;
+grant all on all tables in schema project to dev;
+grant all on all sequences in schema project to dev;
+grant all on all functions in schema project to dev;
+
 create role manager login;
+grant all on schema project to manager;
+grant all on all tables in schema project to manager;
+grant all on all sequences in schema project to manager;
+grant all on all functions in schema project to manager;
 
 REVOKE ALL ON tickets FROM customer;
 REVOKE ALL ON products FROM customer;
@@ -138,8 +137,24 @@ REVOKE ALL ON messages FROM customer;
 REVOKE ALL ON participants FROM customer;
 REVOKE ALL ON users FROM customer;
 
+GRANT All privileges on tickets to manager;
+GRANT All privileges on products to manager;
+GRANT All privileges on messages to manager;
+GRANT All privileges on participants to manager;
+GRANT All privileges on users to manager;
+
+GRANT All privileges on tickets to dev;
+GRANT All privileges on products to dev;
+GRANT All privileges on messages to dev;
+GRANT All privileges on participants to dev;
+GRANT All privileges on users to dev;
+
 Grant EXECUTE on function get_info_about_your_tickets to customer;
 Grant EXECUTE on function create_ticket to customer;
 Grant EXECUTE  on function send_message to customer;
 
-REVOKE TRUNCATE, TRIGGER, TRIGGER on All tables in schema project from dev,manager
+REVOKE TRUNCATE on All tables in schema project from dev;
+REVOKE TRUNCATE on All tables in schema project from manager;
+
+
+

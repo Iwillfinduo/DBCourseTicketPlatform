@@ -81,11 +81,9 @@ class DAOStatic:
     @staticmethod
     def GetTicketByAuthor(connection, author_login):
         cursor = connection.cursor()
-        query = sql.SQL("SELECT * FROM tickets WHERE authorlogin = {author_login}").format(
-            author_login=sql.Literal(author_login)
-        )
-        cursor.execute(query)
+        cursor.callproc('get_info_about_your_tickets', [author_login])
         tickets = cursor.fetchall()
+        connection.commit()
         cursor.close()
         return tickets
 
@@ -266,18 +264,19 @@ class DAOStatic:
 
 
 if __name__ == '__main__':
-    conn = DAOStatic.GetDBConnection(dbname='pg_db', user='postgres', passwd='postgres', host='localhost', port='5432')
-    #DAOStatic.AddUserToDB(conn, 'customer', 'customer', 'Lox', 'Lox', role=3)
-    # # DAO.CreateProduct(conn, 'Steam')
-    # # DAO.CreateTicket(conn, DAO.GetAllProducts(conn)[0]['productid'], 'admin')
-    # #DAO.SendMessageUnderTicket(conn, 'admin', 'b2206e6a-5796-4501-9644-c0220efad069', 'I love you')
-    # #print(DAO.GetMessagesUnderTicket(conn, 'b2206e6a-5796-4501-9644-c0220efad069'))
-    # print(DAOStatic.GetUserFromDB(conn, 'customer'))
-    # # print(DAO.GetAllTickets(conn))
-    # # print(DAO.GetAllProducts(conn))
-    # # print(DAO.GetProductName(conn, '33f03031-6767-4aa4-adb4-df4a6f3177b8'))
-    # #DAO.AddUserToDB(conn, 'dev2', 'dev2', 'VALDOS', 'Глущенко Владислав', role=2)
-    # print(DAO.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
-    # DAO.DeleteTicketAssignments(conn, ticket_id='b2206e6a-5796-4501-9644-c0220efad069')
-    # print(DAO.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
-    #DAOStatic.AddUserToDB(conn, 'customer', 'customer', 'Anton', 'Антоша Бордвайн', role=3)
+    conn = DAOStatic.GetDBConnection(dbname='postgres', user='postgres', passwd='postgres', host='localhost', port='5432')
+    DAOStatic.AddUserToDB(conn, 'customer', 'customer', 'Lox', 'Lox', role=3)
+    DAOStatic.CreateProduct(conn, 'Steam')
+    DAOStatic.AddUserToDB(conn, 'admin', 'admin', 'admin', 'addddmin', 1)
+    # DAO.CreateTicket(conn, DAO.GetAllProducts(conn)[0]['productid'], 'admin')
+    #DAO.SendMessageUnderTicket(conn, 'admin', 'b2206e6a-5796-4501-9644-c0220efad069', 'I love you')
+    #print(DAO.GetMessagesUnderTicket(conn, 'b2206e6a-5796-4501-9644-c0220efad069'))
+    print(DAOStatic.GetUserFromDB(conn, 'customer'))
+    # print(DAO.GetAllTickets(conn))
+    # print(DAO.GetAllProducts(conn))
+    # print(DAO.GetProductName(conn, '33f03031-6767-4aa4-adb4-df4a6f3177b8'))
+    DAOStatic.AddUserToDB(conn, 'dev2', 'dev2', 'VALDOS', 'Глущенко Владислав', role=2)
+    print(DAOStatic.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
+    DAOStatic.DeleteTicketAssignments(conn, ticket_id='b2206e6a-5796-4501-9644-c0220efad069')
+    print(DAOStatic.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
+    DAOStatic.AddUserToDB(conn, 'customer', 'customer', 'Anton', 'Антоша Бордвайн', role=3)

@@ -5,6 +5,7 @@ import os
 
 from DAO.main import DAOStatic as DAO
 from DAO.utils import FormsGenerator
+from utils.db_util_fuctions import generate_connections_array
 
 DB_NAME = os.environ['DB_NAME']
 DB_USER = os.environ['DB_USER']
@@ -13,7 +14,7 @@ DB_HOST = os.environ['DB_HOST']
 DB_PORT = os.environ['DB_PORT']
 SECRET_KEY = os.environ['SECRET_KEY']
 
-conn = DAO.GetDBConnection(DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT)
+connections = generate_connections_array(DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT)
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -27,6 +28,7 @@ def root():
 def login():
     username = request.form.get('username')
     password = request.form.get('password')
+    conn = connections[1]
     try:
         user = DAO.GetUserFromDB(conn, username)
         print(user)
@@ -41,7 +43,7 @@ def login():
             flash('User not found')
 
     except Exception as e:
-        flash(f"Database error: {e}")
+        print(f"Database error: {e}")
 
     return redirect(url_for("root"))
 @app.route('/logout/')
@@ -61,6 +63,7 @@ def homepage():
 @app.route('/api/tickets', methods=['GET'])
 def tickets_table():
     if 'username' in session:
+        conn = connections[session['role']]
         output = []
         if session['role'] == 1 or session['role'] == 2:
             tickets = DAO.GetAllTickets(conn)
@@ -84,6 +87,7 @@ def create_ticket():
 @app.route("/api/create-ticket", methods=['POST', 'GET'])
 def api_create_ticket():
     if 'username' in session:
+        conn = connections[session['role']]
         if request.method == 'POST':
             data = request.json
             ticket_name = data.get("name")
@@ -95,6 +99,7 @@ def api_create_ticket():
 
             # Generate a new ticket ID
             new_ticket_id = DAO.CreateTicket(conn, product_id, session["username"])['create_ticket']
+            DAO.SendMessageUnderTicket(conn, session["username"], new_ticket_id, "*" + str(session["username"]) + " created a ticket")
             DAO.SendMessageUnderTicket(conn, session["username"], new_ticket_id, "!" + ticket_name)
             DAO.SendMessageUnderTicket(conn, session["username"], new_ticket_id, description)
             return jsonify({"success": True, "ticket_id": new_ticket_id})
@@ -102,6 +107,7 @@ def api_create_ticket():
 @app.route("/api/products", methods=['GET'])
 def products_table():
     if 'username' in session:
+        conn = connections[session['role']]
         products = DAO.GetAllProducts(conn)
         return jsonify(products)
 
@@ -109,6 +115,8 @@ def products_table():
 
 @app.route('/ticket/<ticket_id>')
 def ticket_info(ticket_id):
+    if 'username' in session:
+        conn = connections[session['role']]
     if 'username' in session and (session['role'] == 1):
         ticket_id = str(ticket_id)
         print(ticket_id)
@@ -128,10 +136,16 @@ def ticket_info(ticket_id):
                                    username=session['username'])
     elif 'username' in session and session['role'] == 2:
         ticket_id = str(ticket_id)
+        print(ticket_id)
+        ticket = DAO.GetTicketById(conn, ticket_id)
+        if ticket:
+            element = FormsGenerator.GenerateTicketInfo(conn, ticket)
+            return render_template("dev/ticket_info.html", ticket=element, ticket_id=ticket_id, username=session['username'])
 
 @app.route("/chat/<ticket_id>/", methods=['POST','GET'])
 def chat_api(ticket_id):
     if 'username' in session:
+        conn = connections[session['role']]
         if request.method == "GET":
             messages = DAO.GetMessagesUnderTicket(conn, ticket_id)
             for message in messages:
@@ -149,7 +163,9 @@ def chat_api(ticket_id):
 @app.route('/api/<ticket_id>/assignees', methods=['POST'])
 def update_ticket_assignees(ticket_id):
     print('try_to_update')
+
     if 'username' in session and session['role'] == 1:
+        conn = connections[session['role']]
         ticket = DAO.GetTicketById(conn, ticket_id)
         who_made_assignment = session['username']
         if not ticket:
@@ -172,6 +188,7 @@ def update_ticket_assignees(ticket_id):
 @app.route('/api/<ticket_id>/status', methods=['POST'])
 def update_ticket_status(ticket_id):
     if 'username' in session and (session['role'] == 1 or session['role'] == 2):
+        conn = connections[session['role']]
         ticket = DAO.GetTicketById(conn, ticket_id)
         if not ticket:
             return jsonify({"error": "Ticket not found"}), 404
@@ -191,16 +208,20 @@ def update_ticket_status(ticket_id):
 
 @app.route('/api/all_assignees', methods=['GET'])
 def get_assignees():
-    assignees = DAO.GetAllUsersByRole(conn, 2)
-    print(assignees)
-    return jsonify(assignees)
+    if 'username' in session:
+        conn = connections[session['role']]
+        assignees = DAO.GetAllUsersByRole(conn, 2)
+        print(assignees)
+        return jsonify(assignees)
 
 @app.route('/api/<ticket_id>/assignees', methods=['GET'])
 def get_assignees_under_ticket(ticket_id):
-    assignees = DAO.GetAllTicketAssignmentsByRole(conn, ticket_id, 2)
-    print(assignees)
-    print(jsonify({'assignees': assignees}).json)
-    return jsonify({'assignees': assignees})
+    if 'username' in session:
+        conn = connections[session['role']]
+        assignees = DAO.GetAllTicketAssignmentsByRole(conn, ticket_id, 2)
+        print(assignees)
+        print(jsonify({'assignees': assignees}).json)
+        return jsonify({'assignees': assignees})
 
 
 

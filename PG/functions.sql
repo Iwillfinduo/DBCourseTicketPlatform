@@ -15,7 +15,8 @@ create or replace function
             return send_date;
         end if;
     end;
-    $$ language plpgsql;
+    $$ language plpgsql
+       SECURITY DEFINER SET search_path = project;
 
 
 
@@ -34,13 +35,15 @@ create or replace function
             return id;
         end if;
     end;
-    $$ language plpgsql;
+    $$ language plpgsql
+       SECURITY DEFINER SET search_path = project;
 
 create or replace function get_info_about_your_tickets(a_log varchar(30))
 	returns table
         (
             TicketID uuid,
 			ProductID uuid,
+            AuthorLogin varchar(30),
 			Status smallint
         )
 	as
@@ -50,9 +53,13 @@ create or replace function get_info_about_your_tickets(a_log varchar(30))
             return query
 					select tickets.TicketID,
 						   tickets.ProductID,
+						   tickets.authorlogin,
 						   tickets.Status
 					from tickets
 					where tickets.authorLogin = a_log;
+        else
+            return;
         end if;
     end;
-    $$ language plpgsql;
+    $$ language plpgsql
+       SECURITY DEFINER SET search_path = project;
