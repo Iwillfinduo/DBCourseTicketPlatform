@@ -7,6 +7,7 @@ ENV DB_NAME=postgres
 ENV DB_PASSWORD=postgres
 ENV DB_PORT=5432
 ENV DB_USER=postgres
+ENV SETUP=true
 COPY . .
 RUN apt-get update
 RUN pip install -r requirements.txt
@@ -14,7 +15,6 @@ RUN pip install -r requirements.txt
 HEALTHCHECK --interval=5m --timeout=3s \
   CMD curl -f http://localhost/ || exit 1
 
-CMD ["python3", "setup.py"]
 EXPOSE 5000
 
 CMD ["flask", "run", "--debug"]

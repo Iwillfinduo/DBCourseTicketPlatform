@@ -3,6 +3,7 @@ from flask import Flask, request, flash, redirect, url_for, jsonify
 from flask import render_template, session
 import os
 
+from setup import setup
 from DAO.main import DAOStatic as DAO
 from DAO.utils import FormsGenerator
 from utils.db_util_fuctions import generate_connections_array
@@ -13,7 +14,10 @@ DB_PASSWORD = os.environ['DB_PASSWORD']
 DB_HOST = os.environ['DB_HOST']
 DB_PORT = os.environ['DB_PORT']
 SECRET_KEY = os.environ['SECRET_KEY']
+SETUP = os.environ['SETUP']
 
+if SETUP.lower() == 'true':
+    setup()
 connections = generate_connections_array(DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT)
 app = Flask(__name__)
 
@@ -228,4 +232,4 @@ def get_assignees_under_ticket(ticket_id):
 
 if __name__ == '__main__':
 
-    app.run(port=5002)
+    app.run(port=5000)

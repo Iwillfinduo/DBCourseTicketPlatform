@@ -1,0 +1,2 @@
+FROM postgres:12.3-alpine
+COPY ./PG/fast_setup.sql /docker-entrypoint-initdb.d/
