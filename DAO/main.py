@@ -275,7 +275,7 @@ if __name__ == '__main__':
     # print(DAO.GetAllTickets(conn))
     # print(DAO.GetAllProducts(conn))
     # print(DAO.GetProductName(conn, '33f03031-6767-4aa4-adb4-df4a6f3177b8'))
-    DAOStatic.AddUserToDB(conn, 'dev2', 'dev2', 'VALDOS', 'Глущенко Владислав', role=2)
+
     print(DAOStatic.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
     DAOStatic.DeleteTicketAssignments(conn, ticket_id='b2206e6a-5796-4501-9644-c0220efad069')
     print(DAOStatic.GetAllTicketAssignmentsByRole(conn, 'b2206e6a-5796-4501-9644-c0220efad069', 2))
